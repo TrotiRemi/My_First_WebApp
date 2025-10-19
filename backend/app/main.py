@@ -1,12 +1,7 @@
-from fastapi import FastAPI
+# backend/app/main.py
+from app.db.session import get_db
+from fastapi import Depends
 
-app = FastAPI(
-    title="School Organizer API",
-    version="0.1.0",
-    description="API for managing courses, documents, and schedules for students."
-)
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the School Organizer API"}
-
+@app.get("/test-db")
+def test_db(db=Depends(get_db)):
+    return {"status": "Database session ready!"}
