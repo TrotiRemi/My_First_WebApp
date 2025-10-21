@@ -12,28 +12,27 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app"]
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file: .env
+    build: ./backend                 # ✅ on build depuis ./backend (là où est ton code)
+    env_file: ./backend/.env         # ✅ pour settings.DATABASE_URL
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy   # ✅ attend que Postgres soit OK
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
-    working_dir: /app
+      - ./backend:/app               # ✅ /app = code du dossier backend
+    # ✅ migrations Alembic + lancement de l’API
     command: >
-      sh -c "alembic -c alembic.ini upgrade head &&
-             python -m app.db.init_db &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      bash -c "
+      alembic upgrade head || (alembic revision --autogenerate -m 'init' && alembic upgrade head);
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
 
 volumes:
   pgdata:

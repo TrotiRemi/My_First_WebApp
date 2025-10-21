@@ -1,14 +1,16 @@
-# Utilise une image Python officielle
 FROM python:3.10-slim
 
-# Définit le dossier de travail
 WORKDIR /app
 
-# Copie le code source dans le conteneur
-COPY . .
-
-# Installe les dépendances
+# Copie d'abord juste requirements pour profiter du cache Docker
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Ensuite copie tout le code
+COPY . .
+
+# Expose le port
+EXPOSE 8000
+
 # Commande par défaut
-CMD ["python", "app.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
