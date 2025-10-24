@@ -178,6 +178,28 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@router.post("/logout")
+async def logout(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+):
+    """
+    Déconnecter l'utilisateur en supprimant son token actif
+    
+    Nécessite un token JWT dans le header Authorization
+    """
+    # Supprimer la session associée à ce token
+    session = db.query(ActiveSession).filter(ActiveSession.token == token).first()
+    
+    if session:
+        db.delete(session)
+        db.commit()
+        return {"message": "Logged out successfully"}
+    
+    # Si le token n'existe pas dans les sessions, c'est qu'il est déjà expiré/supprimé
+    return {"message": "Already logged out or token invalid"}
+
+
 @router.get("/status")
 def auth_status(token: str | None = Depends(oauth2_scheme_optional)):
     """Retourne l'état de connexion sans lever d'erreur si pas de token.

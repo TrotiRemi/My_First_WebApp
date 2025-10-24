@@ -8,8 +8,17 @@
     body { font-family: Arial, Helvetica, sans-serif; padding: 20px; }
     .container { max-width: 420px; margin: 0 auto; }
     input { width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; }
-    button { padding: 8px 12px; }
+    button { padding: 8px 12px; margin: 4px 2px; cursor: pointer; }
     .hidden { display: none; }
+    .course-card { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; cursor: pointer; transition: 0.2s; }
+    .course-card:hover { background: #e9e9e9; }
+    .course-title { font-weight: bold; margin-bottom: 5px; }
+    .course-dates { font-size: 0.9em; color: #666; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.9em; }
+    .document-card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #f0f0f0; }
+    .document-title { font-weight: bold; color: #0066cc; }
+    .document-link { color: #0066cc; text-decoration: underline; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -43,19 +52,87 @@
     <div id="welcome" class="hidden">
       <h2>Bienvenue</h2>
       <p id="welcome-msg"></p>
-      <button id="btn-logout">Logout</button>
+      
+      <div id="courses-section">
+        <h3>Mes Cours</h3>
+        
+        <div class="form-group">
+          <label>Titre du cours</label>
+          <input id="course-title" placeholder="Ex: Mathématiques" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input id="course-description" placeholder="Ex: Cours de maths niveau L1" />
+        </div>
+        <div class="form-group">
+          <label>Date de début</label>
+          <input id="course-start" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Date de fin</label>
+          <input id="course-end" type="date" />
+        </div>
+        <button id="btn-add-course">Ajouter un cours</button>
+        
+        <div id="courses-list" style="margin-top: 20px;"></div>
+      </div>
+      
+      <button id="btn-logout" style="margin-top: 20px;">Logout</button>
+    </div>
+
+    <div id="course-detail" class="hidden">
+      <button id="btn-back-to-courses" style="margin-bottom: 20px;">← Retour aux cours</button>
+      <h2 id="detail-course-title"></h2>
+      <p id="detail-course-desc"></p>
+      <p id="detail-course-dates"></p>
+      
+      <h3>Ajouter un document</h3>
+      <div class="form-group">
+        <label>Titre du document</label>
+        <input id="doc-title" placeholder="Ex: Cours chapitre 1" />
+      </div>
+      
+      <div style="border: 2px dashed #ccc; padding: 15px; margin: 15px 0; border-radius: 5px; background: #fafafa;">
+        <label style="display: block; margin-bottom: 10px;"><strong>📁 Uploader un fichier</strong></label>
+        <input id="doc-file" type="file" />
+      </div>
+      
+      <p style="font-size: 0.9em; color: #666; margin: 10px 0;">OU</p>
+      
+      <div class="form-group">
+        <label>Lien URL (optionnel)</label>
+        <input id="doc-url" type="url" placeholder="https://example.com/fichier.pdf" />
+      </div>
+      
+      <div class="form-group">
+        <label>Type</label>
+        <select id="doc-type">
+          <option value="">- Choisir -</option>
+          <option value="lecture">Cours (lecture)</option>
+          <option value="exercise">Exercice</option>
+          <option value="correction">Correction</option>
+        </select>
+      </div>
+      <button id="btn-add-document">Ajouter le document</button>
+      
+      <h3 style="margin-top: 30px;">Documents du cours</h3>
+      <div id="documents-list"></div>
+      
+      <button id="btn-logout-detail" style="margin-top: 20px;">Logout</button>
     </div>
 
   </div>
 
   <script>
     const API_BASE = 'http://localhost:8000/api/v1';
+    let currentCourseId = null;
 
     const showLoginBtn = document.getElementById('show-login');
     const showSignupBtn = document.getElementById('show-signup');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const welcome = document.getElementById('welcome');
+    const courseDetail = document.getElementById('course-detail');
 
     function show(el){ el.classList.remove('hidden'); }
     function hide(el){ el.classList.add('hidden'); }
@@ -90,26 +167,260 @@
       const data = await res.json();
       document.getElementById('signup-result').textContent = JSON.stringify(data, null, 2);
       if(res.ok){
-        // auto-login after signup
-        document.getElementById('login-username').value = username;
-        document.getElementById('login-password').value = password;
-        await login();
+        show(loginForm);
+        hide(signupForm);
       }
     }
 
-    function showWelcome(username){
+    async function showWelcome(username){
       hide(document.getElementById('forms'));
+      hide(courseDetail);
       show(welcome);
       document.getElementById('welcome-msg').textContent = `Bonjour ${username} !`;
+      loadCourses();
+    }
+
+    function showCourseDetail(courseId){
+      currentCourseId = courseId;
+      hide(welcome);
+      show(courseDetail);
+      loadCourseDetail();
+    }
+
+    async function loadCourseDetail(){
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch(API_BASE + '/courses/', { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        if(res.ok){
+          const courses = await res.json();
+          const course = courses.find(c => c.id === currentCourseId);
+          if(course){
+            document.getElementById('detail-course-title').textContent = course.title;
+            document.getElementById('detail-course-desc').textContent = course.description || '';
+            const startDate = course.start_date ? new Date(course.start_date).toLocaleDateString('fr-FR') : '-';
+            const endDate = course.end_date ? new Date(course.end_date).toLocaleDateString('fr-FR') : '-';
+            document.getElementById('detail-course-dates').textContent = `Du ${startDate} au ${endDate}`;
+            loadDocuments();
+          }
+        }
+      } catch(e) {
+        console.error('Erreur:', e);
+      }
+    }
+
+    async function addCourse(){
+      const token = localStorage.getItem('access_token');
+      const title = document.getElementById('course-title').value;
+      const description = document.getElementById('course-description').value;
+      const start = document.getElementById('course-start').value;
+      const end = document.getElementById('course-end').value;
+
+      if(!title){
+        alert('Titre obligatoire');
+        return;
+      }
+
+      const body = { title, description, start_date: start, end_date: end };
+      const res = await fetch(API_BASE + '/courses/', { 
+        method: 'POST', 
+        body: JSON.stringify(body), 
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } 
+      });
+
+      if(res.ok){
+        document.getElementById('course-title').value = '';
+        document.getElementById('course-description').value = '';
+        document.getElementById('course-start').value = '';
+        document.getElementById('course-end').value = '';
+        loadCourses();
+      } else {
+        alert('Erreur lors de l\'ajout du cours');
+      }
+    }
+
+    async function loadCourses(){
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch(API_BASE + '/courses/', { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if(res.ok){
+          const courses = await res.json();
+          const coursesList = document.getElementById('courses-list');
+          coursesList.innerHTML = '';
+
+          if(courses.length === 0){
+            coursesList.innerHTML = '<p style="color: #999;">Aucun cours pour l\'instant</p>';
+            return;
+          }
+
+          courses.forEach(course => {
+            const card = document.createElement('div');
+            card.className = 'course-card';
+            card.onclick = () => showCourseDetail(course.id);
+            const startDate = course.start_date ? new Date(course.start_date).toLocaleDateString('fr-FR') : '-';
+            const endDate = course.end_date ? new Date(course.end_date).toLocaleDateString('fr-FR') : '-';
+            card.innerHTML = `
+              <div class="course-title">${course.title}</div>
+              <div>${course.description || ''}</div>
+              <div class="course-dates">
+                Du ${startDate} au ${endDate}
+              </div>
+            `;
+            coursesList.appendChild(card);
+          });
+        } else {
+          console.error('Erreur lors du chargement des cours:', res.status);
+          document.getElementById('courses-list').innerHTML = '<p style="color: red;">Erreur lors du chargement</p>';
+        }
+      } catch(e) {
+        console.error('Exception:', e);
+        document.getElementById('courses-list').innerHTML = '<p style="color: red;">Erreur réseau</p>';
+      }
+    }
+
+    async function addDocument(){
+      const token = localStorage.getItem('access_token');
+      const title = document.getElementById('doc-title').value;
+      const url = document.getElementById('doc-url').value;
+      const type = document.getElementById('doc-type').value;
+      const file = document.getElementById('doc-file').files[0];
+
+      if(!title){
+        alert('Titre obligatoire');
+        return;
+      }
+
+      // Si fichier uploadé
+      if(file){
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', title);
+        formData.append('doc_type', type);
+
+        const res = await fetch(API_BASE + `/documents/upload/${currentCourseId}`, { 
+          method: 'POST', 
+          body: formData,
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if(res.ok){
+          document.getElementById('doc-title').value = '';
+          document.getElementById('doc-file').value = '';
+          document.getElementById('doc-url').value = '';
+          document.getElementById('doc-type').value = '';
+          loadDocuments();
+        } else {
+          const data = await res.json();
+          alert('Erreur: ' + (data.detail || 'Erreur inconnue'));
+        }
+      } 
+      // Sinon URL externe
+      else if(url){
+        const body = { title, url, type, course_id: currentCourseId };
+        const res = await fetch(API_BASE + '/documents/', { 
+          method: 'POST', 
+          body: JSON.stringify(body), 
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } 
+        });
+
+        if(res.ok){
+          document.getElementById('doc-title').value = '';
+          document.getElementById('doc-url').value = '';
+          document.getElementById('doc-type').value = '';
+          loadDocuments();
+        } else {
+          const data = await res.json();
+          alert('Erreur: ' + (data.detail || 'Erreur inconnue'));
+        }
+      }
+      else {
+        alert('Veuillez uploader un fichier ou fournir une URL');
+      }
+    }
+
+    async function loadDocuments(){
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch(API_BASE + '/documents/course/' + currentCourseId, { 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if(res.ok){
+          const documents = await res.json();
+          const docsList = document.getElementById('documents-list');
+          docsList.innerHTML = '';
+
+          if(documents.length === 0){
+            docsList.innerHTML = '<p style="color: #999;">Aucun document pour l\'instant</p>';
+            return;
+          }
+
+          documents.forEach(doc => {
+            const card = document.createElement('div');
+            card.className = 'document-card';
+            const typeLabel = doc.type ? ` (${doc.type})` : '';
+            
+            // Déterminer le type de fichier
+            const url = doc.url;
+            const ext = url.split('.').pop().toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+            const isPdf = ext === 'pdf';
+            const isText = ['txt', 'md', 'html'].includes(ext);
+            const isWord = ['doc', 'docx'].includes(ext);
+            
+            let preview = '';
+            if(isImage){
+              preview = `<img src="${url}" style="max-width: 100%; max-height: 300px; margin: 10px 0; border-radius: 5px;" />`;
+            } else if(isPdf){
+              preview = `<iframe src="${url}" style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"></iframe>`;
+            } else if(isText){
+              preview = `<div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word;"><p style="margin: 0; color: #999;">Contenu du fichier...</p><iframe src="${url}" style="width: 100%; height: 250px; border: none; background: white;"></iframe></div>`;
+            } else if(isWord){
+              preview = `<div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; color: #666;"><p>📄 Document Word</p><a href="${url}" target="_blank" style="color: #0066cc; text-decoration: underline;">Ouvrir le document</a></div>`;
+            } else {
+              preview = `<div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; color: #666;"><p>📎 Fichier</p><a href="${url}" target="_blank" style="color: #0066cc; text-decoration: underline;">Télécharger</a></div>`;
+            }
+            
+            card.innerHTML = `
+              <div class="document-title">
+                <a href="${url}" target="_blank" class="document-link">${doc.title}</a>
+              </div>
+              <div style="font-size: 0.9em; color: #666;">${typeLabel}</div>
+              ${preview}
+            `;
+            docsList.appendChild(card);
+          });
+        } else {
+          console.error('Erreur:', res.status);
+        }
+      } catch(e) {
+        console.error('Erreur:', e);
+      }
+    }
+
+    async function logout(){
+      const token = localStorage.getItem('access_token');
+      await fetch(API_BASE + '/auth/logout', { 
+        method: 'POST', 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('username');
+      location.reload();
     }
 
     document.getElementById('btn-login').onclick = login;
     document.getElementById('btn-signup').onclick = signup;
-    document.getElementById('btn-logout').onclick = () => {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('username');
-      location.reload();
-    };
+    document.getElementById('btn-logout').onclick = logout;
+    document.getElementById('btn-logout-detail').onclick = logout;
+    document.getElementById('btn-add-course').onclick = addCourse;
+    document.getElementById('btn-add-document').onclick = addDocument;
+    document.getElementById('btn-back-to-courses').onclick = () => showWelcome(localStorage.getItem('username'));
 
     // Si déjà token -> afficher welcome
     const token = localStorage.getItem('access_token');
