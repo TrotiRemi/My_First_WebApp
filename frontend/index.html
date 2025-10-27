@@ -4,21 +4,50 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Auth demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; padding: 20px; }
-    .container { max-width: 420px; margin: 0 auto; }
+    .container { max-width: 1200px; margin: 0 auto; }
     input { width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; }
     button { padding: 8px 12px; margin: 4px 2px; cursor: pointer; }
     .hidden { display: none; }
-    .course-card { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; cursor: pointer; transition: 0.2s; }
+    .course-card { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; cursor: pointer; transition: 0.2s; position: relative; }
     .course-card:hover { background: #e9e9e9; }
-    .course-title { font-weight: bold; margin-bottom: 5px; }
-    .course-dates { font-size: 0.9em; color: #666; }
+    .course-delete-btn { position: absolute; bottom: 5px; left: 5px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+    .course-card-compact { border: 1px solid #ddd; padding: 12px; border-radius: 5px; background: #f9f9f9; cursor: pointer; transition: 0.2s; position: relative; min-width: 200px; max-width: 200px; flex: 0 0 200px; overflow: hidden; }
+    .course-card-compact:hover { background: #e9e9e9; }
+    .course-title-compact { font-weight: bold; margin-bottom: 6px; font-size: 0.95em; }
+    .course-desc-compact { font-size: 0.8em; color: #666; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .course-dates-compact { font-size: 0.75em; color: #999; }
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.9em; }
-    .document-card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #f0f0f0; }
-    .document-title { font-weight: bold; color: #0066cc; }
+    .document-card { border: 1px solid #ccc; padding: 12px; margin: 8px; border-radius: 5px; background: #f0f0f0; min-width: 200px; max-width: 200px; flex: 0 0 200px; overflow: hidden; position: relative; }
+    .document-delete-btn { position: absolute; bottom: 5px; left: 5px; background: red; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+    .document-title { font-weight: bold; color: #0066cc; font-size: 0.9em; margin-bottom: 6px; }
     .document-link { color: #0066cc; text-decoration: underline; cursor: pointer; }
+    .documents-grid { display: flex; flex-wrap: wrap; gap: 10px; overflow-x: auto; padding: 10px 0; }
+    .doc-type-section { margin-bottom: 25px; }
+    .doc-type-title { font-weight: bold; font-size: 1em; color: #333; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #0066cc; }
+    .doc-type-row { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 8px 0; scroll-behavior: smooth; }
+    .doc-type-row::-webkit-scrollbar { height: 6px; }
+    .doc-type-row::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    .doc-type-row::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+    .doc-type-row::-webkit-scrollbar-thumb:hover { background: #555; }
+    .add-doc-button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 150px; height: 150px; border: 2px dashed #999; border-radius: 5px; background: #fafafa; cursor: pointer; transition: 0.2s; font-size: 3em; color: #999; }
+    .add-doc-button:hover { background: #e0e0e0; color: #666; }
+    .course-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .markdown-preview { background: white; padding: 15px; border-radius: 5px; margin: 10px 0; max-height: 300px; overflow-y: auto; font-size: 0.95em; line-height: 1.6; }
+    .markdown-preview h1, .markdown-preview h2, .markdown-preview h3 { margin: 15px 0 10px 0; font-weight: bold; }
+    .markdown-preview h1 { font-size: 1.8em; }
+    .markdown-preview h2 { font-size: 1.5em; }
+    .markdown-preview h3 { font-size: 1.2em; }
+    .markdown-preview p { margin: 10px 0; }
+    .markdown-preview ul, .markdown-preview ol { margin: 10px 0 10px 20px; }
+    .markdown-preview li { margin: 5px 0; }
+    .markdown-preview code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
+    .markdown-preview pre { background: #f0f0f0; padding: 10px; border-radius: 3px; overflow-x: auto; margin: 10px 0; }
+    .markdown-preview blockquote { border-left: 4px solid #0066cc; padding-left: 10px; margin-left: 0; color: #666; }
+    .markdown-preview a { color: #0066cc; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -50,43 +79,71 @@
     </div>
 
     <div id="welcome" class="hidden">
-      <h2>Bienvenue</h2>
-      <p id="welcome-msg"></p>
-      
-      <div id="courses-section">
-        <h3>Mes Cours</h3>
-        
-        <div class="form-group">
-          <label>Titre du cours</label>
-          <input id="course-title" placeholder="Ex: Mathématiques" />
+      <div class="course-header">
+        <div>
+          <h2>Mes Cours</h2>
+          <p id="welcome-msg"></p>
         </div>
-        <div class="form-group">
-          <label>Description</label>
-          <input id="course-description" placeholder="Ex: Cours de maths niveau L1" />
+        <div id="add-course-box" style="text-align: center; cursor: pointer;" onclick="showAddCourseForm()">
+          <div class="add-doc-button" style="min-width: 120px; height: 120px; font-size: 2.5em;">+</div>
+          <p style="margin-top: 10px; font-weight: bold; color: #333;">Rajouter un cours</p>
         </div>
-        <div class="form-group">
-          <label>Date de début</label>
-          <input id="course-start" type="date" />
-        </div>
-        <div class="form-group">
-          <label>Date de fin</label>
-          <input id="course-end" type="date" />
-        </div>
-        <button id="btn-add-course">Ajouter un cours</button>
-        
-        <div id="courses-list" style="margin-top: 20px;"></div>
       </div>
+      
+      <div id="courses-list" style="display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 10px 0; scroll-behavior: smooth;"></div>
       
       <button id="btn-logout" style="margin-top: 20px;">Logout</button>
     </div>
 
+    <div id="add-course-form" class="hidden">
+      <button id="btn-back-to-courses-list" style="margin-bottom: 20px;">← Retour aux cours</button>
+      <h2>Ajouter un cours</h2>
+      
+      <div class="form-group">
+        <label>Titre du cours</label>
+        <input id="course-title" placeholder="Ex: Mathématiques" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input id="course-description" placeholder="Ex: Cours de maths niveau L1" />
+      </div>
+      <div class="form-group">
+        <label>Date de début</label>
+        <input id="course-start" type="date" />
+      </div>
+      <div class="form-group">
+        <label>Date de fin</label>
+        <input id="course-end" type="date" />
+      </div>
+      <button id="btn-add-course">Ajouter un cours</button>
+      
+      <button id="btn-logout-courses" style="margin-top: 20px;">Logout</button>
+    </div>
+
     <div id="course-detail" class="hidden">
       <button id="btn-back-to-courses" style="margin-bottom: 20px;">← Retour aux cours</button>
-      <h2 id="detail-course-title"></h2>
-      <p id="detail-course-desc"></p>
-      <p id="detail-course-dates"></p>
+      <div class="course-header">
+        <div>
+          <h2 id="detail-course-title"></h2>
+          <p id="detail-course-desc"></p>
+          <p id="detail-course-dates"></p>
+        </div>
+        <div id="add-doc-box" style="text-align: center; cursor: pointer;" onclick="showAddDocumentForm()">
+          <div class="add-doc-button" style="min-width: 120px; height: 120px; font-size: 2.5em;">+</div>
+          <p style="margin-top: 10px; font-weight: bold; color: #333;">Rajouter un doc</p>
+        </div>
+      </div>
       
-      <h3>Ajouter un document</h3>
+      <h3>Documents du cours</h3>
+      <div id="documents-list" class="documents-grid"></div>
+      
+      <button id="btn-logout-detail" style="margin-top: 20px;">Logout</button>
+    </div>
+
+    <div id="add-document-form" class="hidden">
+      <button id="btn-back-to-course" style="margin-bottom: 20px;">← Retour au cours</button>
+      <h2>Ajouter un document</h2>
+      
       <div class="form-group">
         <label>Titre du document</label>
         <input id="doc-title" placeholder="Ex: Cours chapitre 1" />
@@ -108,17 +165,20 @@
         <label>Type</label>
         <select id="doc-type">
           <option value="">- Choisir -</option>
-          <option value="lecture">Cours (lecture)</option>
-          <option value="exercise">Exercice</option>
-          <option value="correction">Correction</option>
+          <option value="cours">Cours</option>
+          <option value="note_cours">Note cours</option>
+          <option value="exercice">Exercice</option>
+          <option value="correction_exercice">Correction d'exercice</option>
+          <option value="tp_lab">TP/Lab</option>
+          <option value="correction_tp_lab">Correction TP/Lab</option>
+          <option value="partiel">Partiel</option>
+          <option value="correction_partiel">Correction Partiel</option>
+          <option value="info_cours">Info sur le cours</option>
         </select>
       </div>
       <button id="btn-add-document">Ajouter le document</button>
       
-      <h3 style="margin-top: 30px;">Documents du cours</h3>
-      <div id="documents-list"></div>
-      
-      <button id="btn-logout-detail" style="margin-top: 20px;">Logout</button>
+      <button id="btn-logout-add" style="margin-top: 20px;">Logout</button>
     </div>
 
   </div>
@@ -133,6 +193,8 @@
     const signupForm = document.getElementById('signup-form');
     const welcome = document.getElementById('welcome');
     const courseDetail = document.getElementById('course-detail');
+    const addDocumentForm = document.getElementById('add-document-form');
+    const addCourseForm = document.getElementById('add-course-form');
 
     function show(el){ el.classList.remove('hidden'); }
     function hide(el){ el.classList.add('hidden'); }
@@ -183,8 +245,80 @@
     function showCourseDetail(courseId){
       currentCourseId = courseId;
       hide(welcome);
+      hide(addDocumentForm);
       show(courseDetail);
       loadCourseDetail();
+    }
+
+    function showAddDocumentForm(){
+      hide(courseDetail);
+      show(addDocumentForm);
+      // Reset form
+      document.getElementById('doc-title').value = '';
+      document.getElementById('doc-file').value = '';
+      document.getElementById('doc-url').value = '';
+      document.getElementById('doc-type').value = '';
+    }
+
+    function showAddCourseForm(){
+      hide(welcome);
+      show(addCourseForm);
+      // Reset form
+      document.getElementById('course-title').value = '';
+      document.getElementById('course-description').value = '';
+      document.getElementById('course-start').value = '';
+      document.getElementById('course-end').value = '';
+    }
+
+    function backToCourseDetail(){
+      hide(addDocumentForm);
+      show(courseDetail);
+      loadDocuments();
+      setTimeout(loadMarkdownPreviews, 100);
+    }
+
+    function backToCoursesList(){
+      hide(addCourseForm);
+      show(welcome);
+      loadCourses();
+    }
+
+    function deleteCourse(event, courseId, courseName){
+      event.stopPropagation();
+      if(confirm(`Êtes-vous sûr de vouloir supprimer le cours "${courseName}" ?`)){
+        const token = localStorage.getItem('access_token');
+        fetch(API_BASE + '/courses/' + courseId, { 
+          method: 'DELETE', 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        })
+        .then(res => {
+          if(res.ok){
+            loadCourses();
+          } else {
+            alert('Erreur lors de la suppression du cours');
+          }
+        })
+        .catch(e => console.error('Erreur:', e));
+      }
+    }
+
+    function deleteDocument(event, docId, docName){
+      event.stopPropagation();
+      if(confirm(`Êtes-vous sûr de vouloir supprimer le document "${docName}" ?`)){
+        const token = localStorage.getItem('access_token');
+        fetch(API_BASE + '/documents/' + docId, { 
+          method: 'DELETE', 
+          headers: { 'Authorization': `Bearer ${token}` } 
+        })
+        .then(res => {
+          if(res.ok){
+            loadDocuments();
+          } else {
+            alert('Erreur lors de la suppression du document');
+          }
+        })
+        .catch(e => console.error('Erreur:', e));
+      }
     }
 
     async function loadCourseDetail(){
@@ -203,6 +337,7 @@
             const endDate = course.end_date ? new Date(course.end_date).toLocaleDateString('fr-FR') : '-';
             document.getElementById('detail-course-dates').textContent = `Du ${startDate} au ${endDate}`;
             loadDocuments();
+            setTimeout(loadMarkdownPreviews, 100);
           }
         }
       } catch(e) {
@@ -230,11 +365,7 @@
       });
 
       if(res.ok){
-        document.getElementById('course-title').value = '';
-        document.getElementById('course-description').value = '';
-        document.getElementById('course-start').value = '';
-        document.getElementById('course-end').value = '';
-        loadCourses();
+        backToCoursesList();
       } else {
         alert('Erreur lors de l\'ajout du cours');
       }
@@ -259,14 +390,15 @@
 
           courses.forEach(course => {
             const card = document.createElement('div');
-            card.className = 'course-card';
-            card.onclick = () => showCourseDetail(course.id);
+            card.className = 'course-card-compact';
+            card.onclick = (e) => { if(e.target.closest('.course-delete-btn')) return; showCourseDetail(course.id); };
             const startDate = course.start_date ? new Date(course.start_date).toLocaleDateString('fr-FR') : '-';
             const endDate = course.end_date ? new Date(course.end_date).toLocaleDateString('fr-FR') : '-';
             card.innerHTML = `
-              <div class="course-title">${course.title}</div>
-              <div>${course.description || ''}</div>
-              <div class="course-dates">
+              <button class="course-delete-btn" onclick="deleteCourse(event, ${course.id}, '${course.title}')">×</button>
+              <div class="course-title-compact">${course.title}</div>
+              <div class="course-desc-compact">${course.description || ''}</div>
+              <div class="course-dates-compact">
                 Du ${startDate} au ${endDate}
               </div>
             `;
@@ -308,11 +440,7 @@
         });
 
         if(res.ok){
-          document.getElementById('doc-title').value = '';
-          document.getElementById('doc-file').value = '';
-          document.getElementById('doc-url').value = '';
-          document.getElementById('doc-type').value = '';
-          loadDocuments();
+          backToCourseDetail();
         } else {
           const data = await res.json();
           alert('Erreur: ' + (data.detail || 'Erreur inconnue'));
@@ -328,10 +456,7 @@
         });
 
         if(res.ok){
-          document.getElementById('doc-title').value = '';
-          document.getElementById('doc-url').value = '';
-          document.getElementById('doc-type').value = '';
-          loadDocuments();
+          backToCourseDetail();
         } else {
           const data = await res.json();
           alert('Erreur: ' + (data.detail || 'Erreur inconnue'));
@@ -355,50 +480,178 @@
           docsList.innerHTML = '';
 
           if(documents.length === 0){
-            docsList.innerHTML = '<p style="color: #999;">Aucun document pour l\'instant</p>';
+            docsList.innerHTML = '<p style="color: #999; padding: 20px;">Aucun document pour l\'instant</p>';
             return;
           }
 
+          // Définir l'ordre des types
+          const typeOrder = [
+            'cours',
+            'note_cours',
+            'exercice',
+            'correction_exercice',
+            'tp_lab',
+            'correction_tp_lab',
+            'partiel',
+            'correction_partiel',
+            'info_cours'
+          ];
+
+          // Mapper les labels français
+          const typeLabels = {
+            'cours': 'Cours',
+            'note_cours': 'Note cours',
+            'exercice': 'Exercice',
+            'correction_exercice': 'Correction d\'exercice',
+            'tp_lab': 'TP/Lab',
+            'correction_tp_lab': 'Correction TP/Lab',
+            'partiel': 'Partiel',
+            'correction_partiel': 'Correction Partiel',
+            'info_cours': 'Info sur le cours',
+            '': 'Autres'
+          };
+
+          // Grouper les documents par type
+          const groupedDocs = {};
           documents.forEach(doc => {
-            const card = document.createElement('div');
-            card.className = 'document-card';
-            const typeLabel = doc.type ? ` (${doc.type})` : '';
-            
-            // Déterminer le type de fichier
-            const url = doc.url;
-            const ext = url.split('.').pop().toLowerCase();
-            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-            const isPdf = ext === 'pdf';
-            const isText = ['txt', 'md', 'html'].includes(ext);
-            const isWord = ['doc', 'docx'].includes(ext);
-            
-            let preview = '';
-            if(isImage){
-              preview = `<img src="${url}" style="max-width: 100%; max-height: 300px; margin: 10px 0; border-radius: 5px;" />`;
-            } else if(isPdf){
-              preview = `<iframe src="${url}" style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"></iframe>`;
-            } else if(isText){
-              preview = `<div style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word;"><p style="margin: 0; color: #999;">Contenu du fichier...</p><iframe src="${url}" style="width: 100%; height: 250px; border: none; background: white;"></iframe></div>`;
-            } else if(isWord){
-              preview = `<div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; color: #666;"><p>📄 Document Word</p><a href="${url}" target="_blank" style="color: #0066cc; text-decoration: underline;">Ouvrir le document</a></div>`;
-            } else {
-              preview = `<div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; color: #666;"><p>📎 Fichier</p><a href="${url}" target="_blank" style="color: #0066cc; text-decoration: underline;">Télécharger</a></div>`;
+            const type = doc.type || '';
+            console.log(`Doc: ${doc.title}, Type: "${type}"`);
+            if (!groupedDocs[type]) {
+              groupedDocs[type] = [];
             }
-            
-            card.innerHTML = `
-              <div class="document-title">
-                <a href="${url}" target="_blank" class="document-link">${doc.title}</a>
-              </div>
-              <div style="font-size: 0.9em; color: #666;">${typeLabel}</div>
-              ${preview}
-            `;
-            docsList.appendChild(card);
+            groupedDocs[type].push(doc);
           });
+
+          // Afficher par type dans l'ordre défini
+          typeOrder.forEach(type => {
+            if (groupedDocs[type] && groupedDocs[type].length > 0) {
+              const section = document.createElement('div');
+              section.className = 'doc-type-section';
+              
+              const typeTitle = document.createElement('div');
+              typeTitle.className = 'doc-type-title';
+              typeTitle.textContent = typeLabels[type];
+              section.appendChild(typeTitle);
+              
+              const row = document.createElement('div');
+              row.className = 'doc-type-row';
+              
+              groupedDocs[type].forEach(doc => {
+                const card = document.createElement('div');
+                card.className = 'document-card';
+                
+                // Déterminer le type de fichier
+                const url = doc.url;
+                const ext = url.split('.').pop().toLowerCase();
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+                const isPdf = ext === 'pdf';
+                const isMd = ext === 'md';
+                const isText = ['txt', 'html'].includes(ext);
+                const isWord = ['doc', 'docx'].includes(ext);
+                
+                let preview = '';
+                if(isImage){
+                  preview = `<img src="${url}" style="max-width: 100%; max-height: 120px; margin: 6px 0; border-radius: 5px; object-fit: cover;" />`;
+                } else if(isPdf){
+                  preview = `<iframe src="${url}" style="width: 100%; height: 120px; border: 1px solid #ddd; border-radius: 5px; margin: 6px 0;"></iframe>`;
+                } else if(isMd){
+                  preview = `<div class="markdown-preview" data-url="${url}" id="md-${doc.id}" style="max-height: 120px; padding: 8px; font-size: 0.8em;">Chargement...</div>`;
+                } else if(isText){
+                  preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.7em; white-space: pre-wrap; word-break: break-word; color: #333;"><iframe src="${url}" style="width: 100%; height: 100px; border: none; background: white;"></iframe></div>`;
+                } else if(isWord){
+                  preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; text-align: center; color: #666; font-size: 0.8em;"><p style="margin: 0;">📄</p><p style="font-size: 0.7em; margin: 3px 0;">Word</p></div>`;
+                } else {
+                  preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; text-align: center; color: #666; font-size: 0.8em;"><p style="margin: 0;">📎</p><p style="font-size: 0.7em; margin: 3px 0;">File</p></div>`;
+                }
+                
+                card.innerHTML = `
+                  <div class="document-title" style="margin-bottom: 8px;">
+                    <a href="${url}" target="_blank" class="document-link" style="word-break: break-word;">${doc.title}</a>
+                  </div>
+                  <button class="document-delete-btn" onclick="deleteDocument(event, ${doc.id}, '${doc.title}')">×</button>
+                  ${preview}
+                `;
+                row.appendChild(card);
+              });
+              
+              section.appendChild(row);
+              docsList.appendChild(section);
+            }
+          });
+
+          // Afficher les documents sans type
+          if(groupedDocs[''] && groupedDocs[''].length > 0){
+            const section = document.createElement('div');
+            section.className = 'doc-type-section';
+            
+            const typeTitle = document.createElement('div');
+            typeTitle.className = 'doc-type-title';
+            typeTitle.textContent = 'Autres';
+            section.appendChild(typeTitle);
+            
+            const row = document.createElement('div');
+            row.className = 'doc-type-row';
+            
+            groupedDocs[''].forEach(doc => {
+              const card = document.createElement('div');
+              card.className = 'document-card';
+              
+              const url = doc.url;
+              const ext = url.split('.').pop().toLowerCase();
+              const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+              const isPdf = ext === 'pdf';
+              const isMd = ext === 'md';
+              const isText = ['txt', 'html'].includes(ext);
+              const isWord = ['doc', 'docx'].includes(ext);
+              
+              let preview = '';
+              if(isImage){
+                preview = `<img src="${url}" style="max-width: 100%; max-height: 120px; margin: 6px 0; border-radius: 5px; object-fit: cover;" />`;
+              } else if(isPdf){
+                preview = `<iframe src="${url}" style="width: 100%; height: 120px; border: 1px solid #ddd; border-radius: 5px; margin: 6px 0;"></iframe>`;
+              } else if(isMd){
+                preview = `<div class="markdown-preview" data-url="${url}" id="md-${doc.id}" style="max-height: 120px; padding: 8px; font-size: 0.8em;">Chargement...</div>`;
+              } else if(isText){
+                preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.7em; white-space: pre-wrap; word-break: break-word; color: #333;"><iframe src="${url}" style="width: 100%; height: 100px; border: none; background: white;"></iframe></div>`;
+              } else if(isWord){
+                preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; text-align: center; color: #666; font-size: 0.8em;"><p style="margin: 0;">📄</p><p style="font-size: 0.7em; margin: 3px 0;">Word</p></div>`;
+              } else {
+                preview = `<div style="background: white; padding: 8px; border-radius: 5px; margin: 6px 0; text-align: center; color: #666; font-size: 0.8em;"><p style="margin: 0;">📎</p><p style="font-size: 0.7em; margin: 3px 0;">File</p></div>`;
+              }
+              
+              card.innerHTML = `
+                <div class="document-title" style="margin-bottom: 8px;">
+                  <a href="${url}" target="_blank" class="document-link" style="word-break: break-word;">${doc.title}</a>
+                </div>
+                <button class="document-delete-btn" onclick="deleteDocument(event, ${doc.id}, '${doc.title}')">×</button>
+                ${preview}
+              `;
+              row.appendChild(card);
+            });
+            
+            section.appendChild(row);
+            docsList.appendChild(section);
+          }
         } else {
           console.error('Erreur:', res.status);
         }
       } catch(e) {
         console.error('Erreur:', e);
+      }
+    }
+
+    async function loadMarkdownPreviews(){
+      const markdownDivs = document.querySelectorAll('.markdown-preview[data-url]');
+      for(const div of markdownDivs){
+        const url = div.getAttribute('data-url');
+        try{
+          const res = await fetch(url);
+          const content = await res.text();
+          const html = marked.parse(content);
+          div.innerHTML = html;
+        } catch(e){
+          div.innerHTML = '<p style="color: red;">Erreur de chargement</p>';
+        }
       }
     }
 
@@ -418,9 +671,13 @@
     document.getElementById('btn-signup').onclick = signup;
     document.getElementById('btn-logout').onclick = logout;
     document.getElementById('btn-logout-detail').onclick = logout;
+    document.getElementById('btn-logout-add').onclick = logout;
+    document.getElementById('btn-logout-courses').onclick = logout;
     document.getElementById('btn-add-course').onclick = addCourse;
     document.getElementById('btn-add-document').onclick = addDocument;
     document.getElementById('btn-back-to-courses').onclick = () => showWelcome(localStorage.getItem('username'));
+    document.getElementById('btn-back-to-course').onclick = backToCourseDetail;
+    document.getElementById('btn-back-to-courses-list').onclick = backToCoursesList;
 
     // Si déjà token -> afficher welcome
     const token = localStorage.getItem('access_token');

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 import os
 from app.db.session import get_db
@@ -35,8 +35,8 @@ def add_document(
 async def upload_document(
     course_id: int,
     file: UploadFile = File(...),
-    title: str = None,
-    doc_type: str = None,
+    title: str = Form(...),
+    doc_type: str = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -68,7 +68,7 @@ async def upload_document(
         f.write(contents)
     
     # Créer le document
-    doc_title = title or file.filename
+    doc_title = title if title else file.filename
     download_url = f"http://localhost:8000/api/v1/documents/download/{unique_filename}"
     
     doc = Document(
@@ -147,4 +147,30 @@ def get_all_docs(
 ):
     """Récupérer tous les documents de l'utilisateur connecté"""
     return get_all_documents(db=db, user_id=current_user.id)
+
+
+@router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_doc(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Supprimer un document (seulement le propriétaire du cours peut le faire)"""
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Vérifier que l'utilisateur possède le cours du document
+    if doc.course.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this document")
+    
+    # Supprimer le fichier du disque s'il existe
+    if doc.file_path and os.path.exists(doc.file_path):
+        try:
+            os.remove(doc.file_path)
+        except Exception as e:
+            print(f"Erreur lors de la suppression du fichier: {e}")
+    
+    db.delete(doc)
+    db.commit()
 
