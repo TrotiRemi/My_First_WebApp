@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Auth demo</title>
+  <title>Cloud School</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; padding: 20px; }
@@ -48,11 +48,36 @@
     .markdown-preview pre { background: #f0f0f0; padding: 10px; border-radius: 3px; overflow-x: auto; margin: 10px 0; }
     .markdown-preview blockquote { border-left: 4px solid #0066cc; padding-left: 10px; margin-left: 0; color: #666; }
     .markdown-preview a { color: #0066cc; text-decoration: underline; }
+    /* Modal Styles */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); max-width: 400px; text-align: center; }
+    .modal-title { font-size: 1.3em; font-weight: bold; margin-bottom: 15px; color: #333; }
+    .modal-message { font-size: 1em; color: #666; margin-bottom: 25px; line-height: 1.5; }
+    .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+    .modal-btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; transition: 0.3s; }
+    .modal-btn-cancel { background: #e0e0e0; color: #333; }
+    .modal-btn-cancel:hover { background: #d0d0d0; }
+    .modal-btn-confirm { background: #dc3545; color: white; }
+    .modal-btn-confirm:hover { background: #c82333; }
   </style>
 </head>
 <body>
+  <!-- Modal de confirmation -->
+  <div id="confirmation-modal" class="modal-overlay hidden" onclick="if(event.target.id === 'confirmation-modal') closeConfirmationModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title" id="modal-title">Confirmation</div>
+      <div class="modal-message" id="modal-message">Êtes-vous sûr ?</div>
+      <div class="modal-buttons">
+        <button class="modal-btn modal-btn-cancel" onclick="closeConfirmationModal()">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="confirmAction()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
-    <h1>Auth demo</h1>
+    <h1>Cloud School</h1>
+    <p>Your personal environment for your school documents</p>
 
     <div id="forms">
       <div>
@@ -283,42 +308,72 @@
       loadCourses();
     }
 
+    // Variables globales pour la modale
+    let pendingDeleteAction = null;
+
+    function showConfirmationModal(title, message, action) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-message').textContent = message;
+      pendingDeleteAction = action;
+      document.getElementById('confirmation-modal').classList.remove('hidden');
+    }
+
+    function closeConfirmationModal() {
+      document.getElementById('confirmation-modal').classList.add('hidden');
+      pendingDeleteAction = null;
+    }
+
+    function confirmAction() {
+      if (pendingDeleteAction) {
+        pendingDeleteAction();
+      }
+      closeConfirmationModal();
+    }
+
     function deleteCourse(event, courseId, courseName){
       event.stopPropagation();
-      if(confirm(`Êtes-vous sûr de vouloir supprimer le cours "${courseName}" ?`)){
-        const token = localStorage.getItem('access_token');
-        fetch(API_BASE + '/courses/' + courseId, { 
-          method: 'DELETE', 
-          headers: { 'Authorization': `Bearer ${token}` } 
-        })
-        .then(res => {
-          if(res.ok){
-            loadCourses();
-          } else {
-            alert('Erreur lors de la suppression du cours');
-          }
-        })
-        .catch(e => console.error('Erreur:', e));
-      }
+      showConfirmationModal(
+        'Supprimer le cours',
+        `Êtes-vous sûr de vouloir supprimer le cours "${courseName}" ?`,
+        function() {
+          const token = localStorage.getItem('access_token');
+          fetch(API_BASE + '/courses/' + courseId, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          })
+          .then(res => {
+            if(res.ok){
+              loadCourses();
+            } else {
+              alert('Erreur lors de la suppression du cours');
+            }
+          })
+          .catch(e => console.error('Erreur:', e));
+        }
+      );
     }
 
     function deleteDocument(event, docId, docName){
       event.stopPropagation();
-      if(confirm(`Êtes-vous sûr de vouloir supprimer le document "${docName}" ?`)){
-        const token = localStorage.getItem('access_token');
-        fetch(API_BASE + '/documents/' + docId, { 
-          method: 'DELETE', 
-          headers: { 'Authorization': `Bearer ${token}` } 
-        })
-        .then(res => {
-          if(res.ok){
-            loadDocuments();
-          } else {
-            alert('Erreur lors de la suppression du document');
-          }
-        })
-        .catch(e => console.error('Erreur:', e));
-      }
+      showConfirmationModal(
+        'Supprimer le document',
+        `Êtes-vous sûr de vouloir supprimer le document "${docName}" ?`,
+        function() {
+          const token = localStorage.getItem('access_token');
+          fetch(API_BASE + '/documents/' + docId, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          })
+          .then(res => {
+            if(res.ok){
+              loadDocuments();
+            } else {
+              alert('Erreur lors de la suppression du document');
+            }
+          })
+          .catch(e => console.error('Erreur:', e));
+        }
+      );
     }
 
     async function loadCourseDetail(){
@@ -687,6 +742,16 @@
     } else {
       show(loginForm);
     }
+
+    // Fermer modale avec Escape
+    document.addEventListener('keydown', function(event) {
+      if(event.key === 'Escape') {
+        const modal = document.getElementById('confirmation-modal');
+        if(!modal.classList.contains('hidden')) {
+          closeConfirmationModal();
+        }
+      }
+    });
   </script>
 </body>
 </html>
