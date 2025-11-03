@@ -5,10 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.base import Base
-# Importer explicitement les modèles pour enregistrer les tables dans Base.metadata
-# Sans ces imports, Base.metadata.create_all() ne crée aucune table et
-# provoque "no such table: users" avec SQLite en mémoire.
-from app.models.user import User  # noqa: F401
+from app.models.user import User  
 from app.db.session import get_db
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -16,20 +13,13 @@ TEST_DATABASE_URL = "sqlite:///:memory:"
 
 @pytest.fixture(scope="function")
 def db_session():
-    """Crée une session de test avec BD vierge."""
-    # Créer un engine de test
-    # Utiliser StaticPool pour partager la même connexion en mémoire entre toutes
-    # les sessions/sqlalchemy connections de l'engine pendant le test.
     test_engine = create_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
     
-    # Créer toutes les tables dans le test_engine
     Base.metadata.create_all(bind=test_engine)
-    
-    # Créer une session
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     session = TestingSessionLocal()
     
@@ -113,8 +103,6 @@ def test_signup_empty_password(client):
         "email": "test@example.com",
         "password": "" 
     })
-    # Le backend actuel n'impose pas de contrainte sur le mot de passe
-    # (aucune validation Pydantic). La création réussit.
     assert response.status_code == 201
     data = response.json()
     assert data["username"] == "testuser"
@@ -126,9 +114,8 @@ def test_signup_short_password(client):
     response = client.post("/api/v1/auth/signup", json={
         "username": "JhonnyDepp",  
         "email": "test@example.com",
-        "password": "123"  # Trop court
+        "password": "123"  
     })
-    # Idem : pas de validation de longueur => création OK
     assert response.status_code == 201
     data = response.json()
     assert data["username"] == "JhonnyDepp"

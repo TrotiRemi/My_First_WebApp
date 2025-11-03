@@ -7,8 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.db.base import Base
 from app.db.session import get_db
-# Importer le modèle pour que Base.metadata connaisse la table
-from app.models.user import User  # noqa: F401
+from app.models.user import User 
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
