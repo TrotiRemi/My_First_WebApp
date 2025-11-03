@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 import os
+from pathlib import Path
 from app.db.session import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -10,8 +11,8 @@ from app.crud.document import create_document, get_document, get_documents_by_co
 
 router = APIRouter()
 
-# Dossier pour stocker les fichiers uploadés
-UPLOAD_DIR = "/app/uploads"
+
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR") or str(Path.cwd() / "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
