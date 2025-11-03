@@ -8,8 +8,8 @@ from app.api.v1.api import api_router  # ✨ NOUVEAU
 # Import les modèles
 from app.models import user, course, document, event
 
-# Crée les tables
-Base.metadata.create_all(bind=engine)
+# ⚠️ NE PAS créer les tables ici - Alembic s'en charge
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
