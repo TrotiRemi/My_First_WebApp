@@ -7,4 +7,5 @@ uploads/**
 
 # If a backend upload folder exists, ignore its content too
 backend/uploads/**
+frontend/uploads/**
 !backend/uploads/.gitkeep
