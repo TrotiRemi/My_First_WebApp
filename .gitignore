@@ -1,2 +1,10 @@
 .venv/
 __pycache__/
+
+# Ignore uploaded files content
+uploads/**
+!uploads/.gitkeep
+
+# If a backend upload folder exists, ignore its content too
+backend/uploads/**
+!backend/uploads/.gitkeep
